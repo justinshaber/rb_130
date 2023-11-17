@@ -1,6 +1,3 @@
-require 'simplecov'
-SimpleCov.start
-
 # This class represents a todo item and its associated
 # data: name and description. There's also a "done"
 # flag to show whether this todo item is done.
@@ -46,127 +43,114 @@ end
 # on a TodoList object, including iteration and selection.
 
 class TodoList
+  attr_accessor :title
+
   def initialize(title)
     @title = title
     @todos = []
   end
 
   def add(todo)
-    valid_todo?(todo)
-    todos.push(todo)
+    raise TypeError.new("Can only add Todo objects") unless todo.is_a? Todo
+
+    @todos.push(todo)
+    self
   end
 
-  alias_method :<<, :add
-
-  def valid_todo?(todo)
-    raise TypeError, "Can only add Todo objects" unless todo.instance_of? Todo
-  end
+  alias << add
 
   def size
-    todos.size
+    @todos.size
   end
 
   def first
-    todos[0]
+    @todos.first
   end
 
   def last
-    todos[-1]
+    @todos.last
   end
 
   def to_a
-    todos.clone
+    @todos.clone
   end
 
   def done?
-    todos.all? { |todo| todo.done? }
+    @todos.all?(&:done?)
   end
 
-  def item_at(int)
-    todos.fetch(int)
+  def item_at(index)
+    @todos.fetch(index)
   end
 
-  def mark_done_at(int)
-    item_at(int).done!
+  def mark_done_at(index)
+    item_at(index).done!
   end
 
-  def mark_undone_at(int)
-    item_at(int).undone!
+  def mark_undone_at(index)
+    item_at(index).undone!
   end
 
-  def done!
-    todos.each(&:done!)
+  def mark_all_done
+    each(&:done!)
+  end
+
+  def mark_all_undone
+    each(&:undone!)
   end
 
   def shift
-    todos.shift
+    @todos.shift
   end
 
   def pop
-    todos.pop
+    @todos.pop
   end
 
-  def remove_at(int)
-    item_at(int)
-    todos.delete_at(int)
+  def remove_at(index)
+    item_at(index)
+    @todos.delete_at(index)
+  end
+
+  def to_s
+    text = "---- #{title} ----\n"
+    text << @todos.map(&:to_s).join("\n")
+    text
   end
 
   def each
-    todos.each do |todo|
+    @todos.each do |todo|
       yield(todo)
     end
     self
   end
 
-  def select(str = "Today's Updated List")
-    new_list = TodoList.new(str)
-
-    todos.each do |todo|
-      new_list << todo if yield(todo)
+  def select
+    list = TodoList.new("Today's Todos")
+    each do |todo|
+      list << todo if yield(todo)
     end
-
-    new_list
-  end
-
-  def find_by_title(str)
-    self.each do |todo|
-      return todo if todo.title == str
-    end
-    nil
+    list
   end
 
   def all_done
-    select("Today's Done List") do |todo|
-      done?
-    end
+    select(&:done?)
   end
 
   def all_not_done
-    select("Today's Undone List") do |todo|
-      !done?
-    end
+    select { |todo| !todo.done? } 
   end
 
   def mark_done(str)
-    find_by_title(str).done!
+    each do |todo|
+      if todo.title == str
+        todo.done!
+        break
+      end
+    end
   end
 
-  def mark_all_done
-    done!
+  def find_by_title(str)
+    select { |todo| todo.title == str }.first
   end
-
-  def mark_all_undone
-    todos.each(&:undone!)
-  end
-
-  def to_s
-    text = "---- #{title} ----\n"
-    text << todos.map(&:to_s).join("\n")
-    text
-  end
-
-  protected
-
-  attr_accessor :title, :todos
-
 end
